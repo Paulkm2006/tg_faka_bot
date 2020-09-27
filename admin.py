@@ -623,7 +623,7 @@ def card_func_step2(update, context):
         func = context.user_data['func']
         if func == '添加卡密':
             query.edit_message_text(
-                text='请发送文件名为: *分类名｜商品名.txt* 的TXT文件（中文分隔符）\n'
+                text='请发送后缀为: *.txt* 的文件，文件名随意\n'
                      '文件内容为卡密，一行一个\n',
                 parse_mode='Markdown', )
             return ADMIN_CARD_STEP2
@@ -690,43 +690,32 @@ def card_add_exec(update, context):
         new_file = bot.get_file(file_id)
         file_name = update.message.document.file_name
         new_file.download(custom_path='./card/{}'.format(file_name))
-        try:
-            split_file_name = file_name.split('.')[0]
-            user_file_category_name = split_file_name.split('｜')[0]
-            user_file_goods_name = split_file_name.split('｜')[1]
-        except Exception as e:
-            update.message.reply_text('文件名有误，请检查后重新发送！重启会话 /{}'.format(ADMIN_COMMAND_START))
-            return ConversationHandler.END
-        if user_file_category_name != category_name or user_file_goods_name != goods_name:
-            update.message.reply_text('文件名有误，请检查后重新发送！重启会话 /{}'.format(ADMIN_COMMAND_START))
-            return ConversationHandler.END
-        else:
-            f = open("./card/{}".format(file_name))
-            card_list = []
-            while True:
-                lines = f.readlines(10000)
-                if not lines:
-                    break
-                for line in lines:
-                    card_list.append(line)
-            new_card_list = []
-            for card in card_list[:-1]:
-                new_card_list.append(card[:-1])
-            new_card_list.append(card_list[-1])
-            f.close()
-            card_len = len(new_card_list)
-            os.remove('./card/{}'.format(file_name))
-            conn = sqlite3.connect('faka.sqlite3')
-            cursor = conn.cursor()
-            cursor.execute("select * from goods where category_name=? and name=?", (category_name, goods_name))
-            goods = cursor.fetchone()
-            goods_id = goods[0]
-            for i in new_card_list:
-                cursor.execute("INSERT INTO cards VALUES (NULL,?,?,?)", ('active', goods_id, i))
-            conn.commit()
-            conn.close()
-            update.message.reply_text('卡密添加成功，添加的卡密数量为：{}'.format(card_len))
-            return ConversationHandler.END
+        f = open("./card/{}".format(file_name))
+        card_list = []
+        while True:
+            lines = f.readlines(10000)
+            if not lines:
+                break
+            for line in lines:
+                card_list.append(line)
+        new_card_list = []
+        for card in card_list[:-1]:
+            new_card_list.append(card[:-1])
+        new_card_list.append(card_list[-1])
+        f.close()
+        card_len = len(new_card_list)
+        os.remove('./card/{}'.format(file_name))
+        conn = sqlite3.connect('faka.sqlite3')
+        cursor = conn.cursor()
+        cursor.execute("select * from goods where category_name=? and name=?", (category_name, goods_name))
+        goods = cursor.fetchone()
+        goods_id = goods[0]
+        for i in new_card_list:
+            cursor.execute("INSERT INTO cards VALUES (NULL,?,?,?)", ('active', goods_id, i))
+        conn.commit()
+        conn.close()
+        update.message.reply_text('卡密添加成功，添加的卡密数量为：{}'.format(card_len))
+        return ConversationHandler.END
     except Exception as e:
         print(e)
 
